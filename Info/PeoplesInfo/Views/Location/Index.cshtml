@@ -1,0 +1,112 @@
+﻿@{
+    ViewData["Title"] = "Location Selector";
+}
+
+<h2>Select Location</h2>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="countryDropdown">Country:</label>
+            <select id="countryDropdown" class="form-control">
+                <option value="">Select Country</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="stateDropdown">State:</label>
+            <select id="stateDropdown" class="form-control">
+                <option value="">Select State</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="cityDropdown">City:</label>
+            <select id="cityDropdown" class="form-control">
+                <option value="">Select City</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    @*<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">*@
+    <script type="text/javascript">
+        $(document).ready(function () {
+            // Load countries on page load
+            $.ajax({
+                url: '@Url.Action("GetCountries", "Location")',
+                type: 'GET',
+                success: function (countries) {
+                    $.each(countries, function (i, country) {
+                        $('#countryDropdown').append($('<option>', {
+                            value: country.countryId,
+                            text: country.countryName
+                        }));
+                    });
+                }
+            });
+
+            // Load states when a country is selected
+            $('#countryDropdown').change(function () {
+                var countryId = $(this).val();
+
+                //Rest state and city drop downs when  the country changes
+                $('#stateDropdown').empty().append($('<option>', {
+                    value: '',
+                    text: 'Select State'
+                }));
+
+                $('#cityDropdown').empty().append($('<option>', {
+                    value: '',
+                    text: 'Select City'
+                }));
+
+                //if valid country is selected, fetch states for the country
+                if(countryId !==""){
+
+                
+                $.ajax({
+                    url: '@Url.Action("GetStates", "Location")',
+                    data: { countryId: countryId },
+                    type: 'GET',
+                    success: function (states) {
+                        $.each(states, function (i, state) {
+                            $('#stateDropdown').append($('<option>', {
+                                value: state.stateId,
+                                text: state.stateName
+                            }));
+                        });
+                    }
+                });
+                }
+            });
+
+            // Load cities when a state is selected
+            $('#stateDropdown').change(function () {
+                var stateId = $(this).val();
+                $('#cityDropdown').empty().append($('<option>', {
+                    value: '',
+                    text: 'Select City'
+                }));
+
+                $.ajax({
+                    url: '@Url.Action("GetCities", "Location")',
+                    data: { stateId: stateId },
+                    type: 'GET',
+                    success: function (cities) {
+                        $.each(cities, function (i, city) {
+                            $('#cityDropdown').append($('<option>', {
+                                value: city.cityId,
+                                text: city.cityName
+                            }));
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}
