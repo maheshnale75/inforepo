@@ -4,9 +4,8 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using PeoplesInfo.Models;
 
-namespace PeoplesInfo
+namespace infoapi.Entities
 {
     public partial class infoContext : DbContext
     {
@@ -19,24 +18,17 @@ namespace PeoplesInfo
         {
         }
 
-        public virtual DbSet<DTOCity> Cities { get; set; }
-        public virtual DbSet<DTOCountry> Countries { get; set; }
-        public virtual DbSet<DTOState> States { get; set; }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-
-                
-            }
-        }
+        public virtual DbSet<City> Cities { get; set; }
+        public virtual DbSet<Country> Countries { get; set; }
+        public virtual DbSet<RoleTable> RoleTables { get; set; }
+        public virtual DbSet<Session> Sessions { get; set; }
+        public virtual DbSet<State> States { get; set; }
+        public virtual DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<DTOCity>(entity =>
+            modelBuilder.Entity<City>(entity =>
             {
-                entity.HasKey(e => e.CityId);
                 entity.Property(e => e.CityName).HasMaxLength(100);
 
                 entity.HasOne(d => d.State)
@@ -45,20 +37,65 @@ namespace PeoplesInfo
                     .HasConstraintName("FK__Cities__StateId__3B75D760");
             });
 
-            modelBuilder.Entity<DTOCountry>(entity =>
-            {   entity.HasKey(e => e.CountryId);
+            modelBuilder.Entity<Country>(entity =>
+            {
                 entity.Property(e => e.CountryName).HasMaxLength(100);
             });
 
-            modelBuilder.Entity<DTOState>(entity =>
+            modelBuilder.Entity<RoleTable>(entity =>
             {
-                entity.HasKey(e => e.CountryId);
+                entity.ToTable("RoleTable");
+
+                entity.Property(e => e.Role)
+                    .HasMaxLength(5)
+                    .IsUnicode(false);
+            });
+
+            modelBuilder.Entity<Session>(entity =>
+            {
+                entity.Property(e => e.LoginTime).HasColumnType("datetime");
+
+                entity.Property(e => e.LogoutTime).HasColumnType("datetime");
+
+                entity.HasOne(d => d.Role)
+                    .WithMany(p => p.Sessions)
+                    .HasForeignKey(d => d.RoleId)
+                    .HasConstraintName("FK__Sessions__RoleId__4E88ABD4");
+
+                entity.HasOne(d => d.User)
+                    .WithMany(p => p.Sessions)
+                    .HasForeignKey(d => d.UserId)
+                    .HasConstraintName("FK__Sessions__UserId__4D94879B");
+            });
+
+            modelBuilder.Entity<State>(entity =>
+            {
                 entity.Property(e => e.StateName).HasMaxLength(100);
 
                 entity.HasOne(d => d.Country)
                     .WithMany(p => p.States)
                     .HasForeignKey(d => d.CountryId)
                     .HasConstraintName("FK__States__CountryI__38996AB5");
+            });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.Property(e => e.HashedPassword)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Salt)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Username)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.HasOne(u => u.Role) // Navigation property for Role
+                .WithMany(r => r.Users) // Navigation property for Users in Role
+                .HasForeignKey(u => u.RoleId) // Foreign key in User table
+                .OnDelete(DeleteBehavior.SetNull);
             });
 
             OnModelCreatingPartial(modelBuilder);
