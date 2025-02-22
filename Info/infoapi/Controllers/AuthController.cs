@@ -1,5 +1,8 @@
-﻿using infoapi.Entities;
+﻿using infoapi.DbData.Models;
+using infoapi.Entities;
 using infoapi.Interfaces;
+using infoapi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,12 +12,13 @@ namespace infoapi.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        public readonly IAuthService _AuthService;
+        public readonly IAuthService _authService;
 
         public AuthController(IAuthService authService)
         {
-            _AuthService = authService;
+            _authService = authService;
         }
+        [Authorize]
         [HttpPost("Register User")]
         public async Task<IActionResult> Register(RegisterUser User)
         {
@@ -25,7 +29,7 @@ namespace infoapi.Controllers
                     return BadRequest("Invalid input data. Ensure all fields are correctly provided.");
                 }
 
-                var user = _AuthService.RegisterUser(User);
+                var user = _authService.RegisterUser(User);
                 return Ok(new { Message = "User registered successfully", User = user });
 
             }
@@ -44,7 +48,7 @@ namespace infoapi.Controllers
             try
             {
 
-                var token = await _AuthService.Login(User);
+                var token = await _authService.Login(User);
                 return Ok(new { Token = token });
 
             }
@@ -53,6 +57,7 @@ namespace infoapi.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+        [Authorize]
         [HttpPost("LogOut")]
         public async Task<IActionResult> Logout([FromBody] Guid sessionId)
         {
@@ -63,7 +68,7 @@ namespace infoapi.Controllers
 
             try
             {
-                await _AuthService.Logout(sessionId);
+                await _authService.Logout(sessionId);
                 return Ok(new { Message = "Logout successful" });
             }
             catch (Exception ex)
@@ -71,5 +76,35 @@ namespace infoapi.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+        [Authorize]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPassword request)
+        {
+            try
+            {
+                var result = await _authService.ForgotPassword(request.Input);
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+        [Authorize]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPassword request)
+        {
+            try
+            {
+                var result = await _authService.ResetPassword(request);
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
     }
 }
