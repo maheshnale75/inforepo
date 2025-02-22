@@ -24,6 +24,7 @@ namespace infoapi.Entities
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<State> States { get; set; }
         public virtual DbSet<User> Users { get; set; }
+        public virtual DbSet<OTPTable> OTPTable { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -96,6 +97,31 @@ namespace infoapi.Entities
                 .WithMany(r => r.Users) // Navigation property for Users in Role
                 .HasForeignKey(u => u.RoleId) // Foreign key in User table
                 .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<OTPTable>(entity =>
+            {
+                entity.HasKey(o => o.Id);
+
+                entity.Property(o => o.Id)
+                    .IsRequired()
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(o => o.UserId)
+                    .IsRequired();
+
+                entity.Property(o => o.Otp)
+                    .IsRequired()
+                    .HasMaxLength(6);
+
+                entity.Property(o => o.ExpirationTime)
+                    .IsRequired();
+
+                
+                entity.HasOne(o => o.User)
+                    .WithMany(u => u.OTPs)  // Ensure User class has ICollection<OTPTable> OTPs
+                    .HasForeignKey(o => o.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             OnModelCreatingPartial(modelBuilder);

@@ -1,4 +1,5 @@
-﻿using infoapi.Entities;
+﻿using infoapi.DbData.Models;
+using infoapi.Entities;
 using infoapi.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -21,19 +22,20 @@ namespace infoapi.Services
         }
         public async Task<User> RegisterUser(RegisterUser registerDto)
         {
-            if(_context.Users.Any(u => u.Username == registerDto.Username))
+            if (_context.Users.Any(u => u.Username == registerDto.Username))
             {
                 throw new Exception("A user with this user name is already exist");
             }
 
-                var salt = GenerateSalt();
+            var salt = GenerateSalt();
             var hashedPassword = HashPassword(registerDto.Password, salt);
-            
+
             var user = new User
             {
                 Username = registerDto.Username,
                 HashedPassword = hashedPassword,
                 Salt = salt,
+                EmailId = registerDto.EmailId,
                 RoleId = registerDto.RoleId
             };
 
@@ -65,7 +67,7 @@ namespace infoapi.Services
             await _context.SaveChangesAsync();
 
             // Generate JWT Token
-            var token = GenerateJwtToken(session.SessionId.ToString(),user.Role.Role);
+            var token = GenerateJwtToken(session.SessionId.ToString(), user.Role.Role);
 
             return token;
         }
@@ -81,7 +83,7 @@ namespace infoapi.Services
             _context.Sessions.Update(session);
             await _context.SaveChangesAsync();
         }
-        private string GenerateJwtToken(string sessionId,string role)
+        private string GenerateJwtToken(string sessionId, string role)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
@@ -113,6 +115,77 @@ namespace infoapi.Services
             byte[] saltBytes = new byte[16];
             rng.GetBytes(saltBytes);
             return Convert.ToBase64String(saltBytes);
+        }
+        public async Task<string> ForgotPassword(string input)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailId == input || u.Username == input);
+            if (user == null)
+                throw new Exception("User not found");
+
+            var otp = new Random().Next(100000, 999999).ToString(); // Generate 6-digit OTP
+            var otpExpiration = DateTime.UtcNow.AddMinutes(10); // Set OTP expiry
+
+            var otpEntry = new OTPTable
+            {
+                UserId = user.Id,
+                Otp = otp,
+                ExpirationTime = otpExpiration
+            };
+
+            _context.OTPTable.Add(otpEntry);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            // Send OTP via email
+            var emailService = new EmailService(_configuration);
+            await emailService.SendOtpEmail(user.EmailId, otp);
+
+            return "OTP sent to your email.";
+        }
+        public async Task<string> ResetPassword(ResetPassword reset)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailId == reset.EmailId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            //var otpEntry = await _context.OTPs
+            //    .Where(o => o.UserId == user.Id &&  o.ExpirationTime > DateTime.UtcNow)
+            //    .FirstOrDefaultAsync();
+
+            
+            var otpEntry = await VerifyOtp(user.Id);
+            if (otpEntry == null)
+                throw new Exception("Invalid or expired OTP");
+            var salt = GenerateSalt();
+            var hashedPassword = HashPassword(reset.NewPassword, salt);
+
+            user.HashedPassword = hashedPassword;
+            user.Salt = salt;
+
+            _context.Users.Update(user);
+            _context.OTPTable.Remove(otpEntry); // Remove OTP after use
+            await _context.SaveChangesAsync();
+
+            return "Password reset successful.";
+        }
+
+        public async Task<OTPTable> VerifyOtp(int usierid)
+        {
+            var otpEntry = await _context.OTPTable
+               .Where(o => o.UserId == usierid && o.ExpirationTime > DateTime.UtcNow)
+               .FirstOrDefaultAsync();
+
+            if (otpEntry != null)
+            {
+                return otpEntry;
+            }
+            return null;
+
         }
     }
 }

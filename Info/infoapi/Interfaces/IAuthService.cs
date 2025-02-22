@@ -1,4 +1,5 @@
-﻿using infoapi.Entities;
+﻿using infoapi.DbData.Models;
+using infoapi.Entities;
 
 namespace infoapi.Interfaces
 {
@@ -7,5 +8,7 @@ namespace infoapi.Interfaces
         Task<User> RegisterUser(RegisterUser registerDto);
         Task<string> Login(LoginUser loginDto); // Return JWT Token
         Task Logout(Guid sessionId);
+        Task<string> ForgotPassword(string input);
+        Task<string> ResetPassword(ResetPassword reset);
     }
 }
