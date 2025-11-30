@@ -18,7 +18,7 @@ namespace infoapi.Controllers
         {
             _authService = authService;
         }
-        [Authorize]
+        
         [HttpPost("Register User")]
         public async Task<IActionResult> Register(RegisterUser User)
         {
