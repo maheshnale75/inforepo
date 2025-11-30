@@ -17,8 +17,10 @@ namespace infoapi.Entities
         public string Username { get; set; }
         public string HashedPassword { get; set; }
         public string Salt { get; set; }
+        public string EmailId { get; set; }
 
         public virtual ICollection<Session> Sessions { get; set; }
+        public virtual ICollection<OTPTable> OTPs { get; set; }
 
         public int RoleId { get; set; }
         public RoleTable Role { get; set; }
